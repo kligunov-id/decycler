@@ -22,7 +22,9 @@ int main(int argc, char **argv) {
     app.add_flag("-v", config.verbose, "Print debug info");
     CLI11_PARSE(app, argc, argv);
 
-    Log::init(config.verbose);
+    if (config.verbose) {
+        Log::init(Log::Level::INFO);
+    }
 
     Graph graph;
     std::cin >> graph;
