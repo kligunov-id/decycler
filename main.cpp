@@ -1,10 +1,13 @@
-#include "CLI11.hpp"
-
 #include <iostream>
 #include <ranges>
 #include <sstream>
 #include <string>
 #include <vector>
+#include <bitset>
+
+#include "CLI11.hpp"
+
+#include "log.hpp"
 
 struct Config {
     bool verbose = false;
@@ -33,14 +36,8 @@ std::istream& operator>>(std::istream& in, Graph& graph) {
 }
 
 void solve(Graph graph, const Config &config) {
-    std::cout << graph.n << " " << graph.m << "\n";
-    for (auto &u_incident: graph.incident) {
-        for (auto u: u_incident) {
-            std::cout << u << " ";
-        }
-        std::cout << "\n";
-    }
-    if (config.verbose) { std::cout << "hi!\n"; }
+    Log::info("Graph: n={}, m={}", graph.n, graph.m);
+    std::vector<std::vector<bool>> achievable_from(graph.n, std::vector<bool>(graph.n, false));
 }
 
 int main(int argc, char **argv) {
@@ -49,6 +46,8 @@ int main(int argc, char **argv) {
     CLI::App app;
     app.add_flag("-v", config.verbose, "Print debug info");
     CLI11_PARSE(app, argc, argv);
+
+    Log::init(config.verbose);
 
     Graph graph;
     std::cin >> graph;
