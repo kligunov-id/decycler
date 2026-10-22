@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <iostream>
 #include <bitset>
 
@@ -8,6 +9,8 @@
 
 struct Config {
     bool verbose = false;
+    bool shuffle = false; // implement
+    bool sort = false; // <- on by default
 };
 
 void solve(Graph graph, const Config &config) { // <- reseed + local opt? + sigterm
@@ -15,7 +18,16 @@ void solve(Graph graph, const Config &config) { // <- reseed + local opt? + sigt
 
     std::vector<std::vector<bool>> achievable_from(graph.n, std::vector<bool>(graph.n, false)); // <- bitset
     std::vector<bool> included(graph.n, false);
-    for (Node u = 0; u < graph.n; u++) { // <- shuffle + sort by degree
+    std::vector<Node> picking_order;
+    for (Node u = 0; u < graph.n; u++) {
+        picking_order.push_back(u);
+    }
+    if (config.sort) {
+        std::sort(picking_order.begin(), picking_order.end(), [&](Node u, Node v) {
+                return graph.total_deg[u] < graph.total_deg[v];
+        });
+    }
+    for (Node u: picking_order) {
         // w_i -> u -> v_i
         std::vector<bool> achievable_from_u(graph.n, false);
         for (Node v: graph.out_links[u]) {
@@ -62,6 +74,8 @@ int main(int argc, char **argv) {
 
     CLI::App app;
     app.add_flag("-v", config.verbose, "Print debug info");
+    app.add_flag("-s", config.shuffle, "Shuffle nodes before sorting");
+    app.add_flag("-o", config.sort, "Pick nodes in the order of their degrees");
     CLI11_PARSE(app, argc, argv);
 
     if (config.verbose) {
