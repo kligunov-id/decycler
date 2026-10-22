@@ -4,23 +4,29 @@
 #include <string>
 #include <vector>
 
+using Node = size_t;
+
 struct Graph {
-    size_t n, m;
-    std::vector<std::vector<size_t>> incident;
+    Node n, m;
+
+    std::vector<std::vector<Node>> out_links;
+    std::vector<std::vector<Node>> in_links;
 };
 
 std::istream& operator>>(std::istream& in, Graph& graph) {
     int blank;
     in >> graph.n >> graph.m >> blank;
     in.ignore();
-    graph.incident.resize(graph.n);
-    for (auto &&[u, u_incedent]: std::views::enumerate(graph.incident)) {
+    graph.out_links.resize(graph.n);
+    graph.in_links.resize(graph.n);
+    for (Node u = 0; u < graph.n; u++) {
         std::string input_line;
         getline(in, input_line);
         std::stringstream ss(input_line);
-        size_t v;
+        Node v;
         while (ss >> v) {
-            u_incedent.push_back(--v);
+            graph.out_links[u].push_back(--v);
+            graph.in_links[v].push_back(u);
         }
     }
     return in;
