@@ -23,10 +23,15 @@ public:
     std::vector<Node> evaluate(const std::vector<double> &priorities) {
         std::vector<Node> picking_order(graph.n);
         std::iota(picking_order.begin(), picking_order.end(), 0);
-        std::sort(picking_order.begin(), picking_order.end(),
-                [&](Node u, Node v) { return priorities[u] < priorities[v]; }
-        );
+        sort_nodes_by_priority(picking_order, priorities);
+        for (auto &out_links: graph.out_links) {
+            sort_nodes_by_priority(out_links, priorities);
+        }
         Log::info("Seed picking order: {}", picking_order);
+        Log::info("Outlinks: {}", graph.out_links[0]);
+        Log::info("Outlinks: {}", graph.out_links[1]);
+        Log::info("Outlinks: {}", graph.out_links[2]);
+        Log::info("Outlinks: {}", graph.out_links[3]);
 
         for (Node u = 0; u < graph.n; u++) {
             if (states[u] == NONE) {
@@ -54,6 +59,10 @@ private:
 
     std::vector<State> states;
 
+    void sort_nodes_by_priority(std::vector<Node> &nodes, const std::vector<double> &priorities) {
+        std::sort(nodes.begin(), nodes.end(), [&](Node u, Node v) { return priorities[u] < priorities[v]; });
+    }
+
     bool is_acyclic_with(Node u) {
         for (Node v: graph.out_links[u]) {
             if (states[v] == VISITING) {
@@ -71,7 +80,7 @@ private:
                 Log::error("Fatal eror, edge {}->{} is inside a cycle", v, u);
             }
             if (states[v] == NONE) {
-                if (is_acyclic_with(v)) { // <- do not check twice
+                if (is_acyclic_with(v)) {
                     add_node(v);
                 } else {
                     Log::debug("Skipping node {}", v);
@@ -93,21 +102,20 @@ std::vector<double> generate_initial_priorities(const Graph &graph, const Config
     return priorities;
 }
 
-void solve(Graph &graph, const Config &config) { // <- reseed + local opt? + sigterm
+void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigterm
     Log::info("Graph: n={}, m={}", graph.n, graph.m);
 
     std::vector<double> priorities = generate_initial_priorities(graph, config);
-    const auto skipped = Evaluator(graph).evaluate(priorities);
-    size_t skipped_count = 0;
+    Log::info("Priorities: {}", priorities);
+    const std::vector<Node> skipped = Evaluator(graph).evaluate(priorities);
 
     if (!config.dry) {
         for (Node u: skipped) {
-            skipped_count++;
             std::cout << u + 1 << "\n";
         }
     }
 
-    Log::info("Total nodes skipped: {}, skipped nodes: {}", skipped_count, skipped);
+    Log::info("Total nodes skipped: {}, skipped nodes: {}", skipped.size(), skipped);
 }
 
 int main(int argc, char **argv) {
