@@ -12,6 +12,7 @@ struct Config {
     bool verbose = false;
     double jitter = 0; // implement
     bool sort = false; // <- on by default
+    bool dry = false;
 };
 
 class Evaluator {
@@ -63,17 +64,17 @@ private:
     }
 
     void add_node(Node u) {
-        Log::info("Adding node {}", u);
+        Log::debug("Adding node {}", u);
         states[u] = VISITING;
         for (Node v: graph.out_links[u]) {
             if (states[v] == VISITING) {
-                Log::info("Fatal eror, edge {}->{} is inside a cycle", v, u);
+                Log::error("Fatal eror, edge {}->{} is inside a cycle", v, u);
             }
             if (states[v] == NONE) {
                 if (is_acyclic_with(v)) { // <- do not check twice
                     add_node(v);
                 } else {
-                    Log::info("Skipping node {}", v);
+                    Log::debug("Skipping node {}", v);
                     states[v] = SKIPPED;
                 }
             }
@@ -99,9 +100,11 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt? + sig
     const auto skipped = Evaluator(graph).evaluate(priorities);
     size_t skipped_count = 0;
 
-    for (Node u: skipped) {
-        skipped_count++;
-        std::cout << u + 1 << "\n";
+    if (!config.dry) {
+        for (Node u: skipped) {
+            skipped_count++;
+            std::cout << u + 1 << "\n";
+        }
     }
 
     Log::info("Total nodes skipped: {}, skipped nodes: {}", skipped_count, skipped);
@@ -111,9 +114,12 @@ int main(int argc, char **argv) {
     Config config;
 
     CLI::App app;
-    app.add_flag("-v", config.verbose, "Print debug info");
+    app.add_flag("-v", config.verbose, "Print more info, -vv for full debug output");
+    app.add_flag("-d", config.dry, "Do not print the answer");
+
     app.add_flag("-s", config.sort, "Set node order priorites equal to node degrees");
-    app.add_flag("-j", config.jitter, "Specify node priority variation");
+    app.add_option("-j", config.jitter, "Specify node priority variation");
+
     CLI11_PARSE(app, argc, argv);
 
     if (config.verbose) {

@@ -5,8 +5,9 @@
 class Log {
 public:
     enum Level {
-        NONE = 0,
+        ERROR = 0,
         INFO = 1,
+        DEBUG = 2,
     };
 
     static void init(Level level) {
@@ -14,9 +15,23 @@ public:
     }
 
     template< class... Args >
+    static void error(std::string_view fmt, Args&&... args) {
+        if (_logger && _logger->log_level >= ERROR) {
+            _logger->_print("ERROR", fmt, args...);
+        }
+    }
+
+    template< class... Args >
     static void info(std::string_view fmt, Args&&... args) {
         if (_logger && _logger->log_level >= INFO) {
             _logger->_print("INFO", fmt, args...);
+        }
+    }
+
+    template< class... Args >
+    static void debug(std::string_view fmt, Args&&... args) {
+        if (_logger && _logger->log_level >= DEBUG) {
+            _logger->_print("DEBUG", fmt, args...);
         }
     }
 
