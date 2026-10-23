@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
-#include <bitset>
+#include <numeric>
+#include <ranges>
 
 #include "CLI11.hpp"
 
@@ -9,16 +10,23 @@
 
 struct Config {
     bool verbose = false;
-    bool shuffle = false; // implement
+    double jitter = 0; // implement
     bool sort = false; // <- on by default
 };
 
 class Evaluator {
 public:
 
-    Evaluator(const Graph& graph): graph(graph), states(graph.n, NONE) {}
+    Evaluator(Graph& graph): graph(graph), states(graph.n, NONE) {}
 
-    std::vector<Node> evaluate() {
+    std::vector<Node> evaluate(const std::vector<double> &priorities) {
+        std::vector<Node> picking_order(graph.n);
+        std::iota(picking_order.begin(), picking_order.end(), 0);
+        std::sort(picking_order.begin(), picking_order.end(),
+                [&](Node u, Node v) { return priorities[u] < priorities[v]; }
+        );
+        Log::info("Seed picking order: {}", picking_order);
+
         for (Node u = 0; u < graph.n; u++) {
             if (states[u] == NONE) {
                 add_node(u);
@@ -34,7 +42,7 @@ public:
     }
 
 private:
-    const Graph& graph;
+    Graph& graph;
 
     enum State {
         SKIPPED,
@@ -74,10 +82,21 @@ private:
     }
 };
 
-void solve(Graph graph, const Config &config) { // <- reseed + local opt? + sigterm
+std::vector<double> generate_initial_priorities(const Graph &graph, const Config &config) {
+    std::vector<double> priorities(graph.n, 0);
+    if (config.sort) {
+        for (auto [u, deg]: std::views::enumerate(graph.total_deg)) {
+            priorities[u] = deg;
+        }
+    }
+    return priorities;
+}
+
+void solve(Graph &graph, const Config &config) { // <- reseed + local opt? + sigterm
     Log::info("Graph: n={}, m={}", graph.n, graph.m);
 
-    const auto skipped = Evaluator(graph).evaluate();
+    std::vector<double> priorities = generate_initial_priorities(graph, config);
+    const auto skipped = Evaluator(graph).evaluate(priorities);
     size_t skipped_count = 0;
 
     for (Node u: skipped) {
@@ -93,8 +112,8 @@ int main(int argc, char **argv) {
 
     CLI::App app;
     app.add_flag("-v", config.verbose, "Print debug info");
-    app.add_flag("-s", config.shuffle, "Shuffle nodes before sorting");
-    app.add_flag("-o", config.sort, "Pick nodes in the order of their degrees");
+    app.add_flag("-s", config.sort, "Set node order priorites equal to node degrees");
+    app.add_flag("-j", config.jitter, "Specify node priority variation");
     CLI11_PARSE(app, argc, argv);
 
     if (config.verbose) {
