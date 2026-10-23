@@ -31,7 +31,7 @@ public:
     template< class... Args >
     static void debug(std::string_view fmt, Args&&... args) {
         if (_logger && _logger->log_level >= DEBUG) {
-            _logger->_print("DEBUG", fmt, args...);
+            _logger->_print("DBUG", fmt, args...);
         }
     }
 

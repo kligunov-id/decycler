@@ -9,7 +9,7 @@
 #include "graph.hpp"
 
 struct Config {
-    bool verbose = false;
+    int verbose = 0;
     double jitter = 0; // implement
     bool sort = false; // <- on by default
     bool dry = false;
@@ -131,7 +131,7 @@ int main(int argc, char **argv) {
     CLI11_PARSE(app, argc, argv);
 
     if (config.verbose) {
-        Log::init(Log::Level::INFO);
+        Log::init(config.verbose > 1 ? Log::Level::DEBUG : Log::Level::INFO);
     }
 
     Graph graph;
