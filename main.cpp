@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <iostream>
 #include <numeric>
+#include <random>
 #include <ranges>
 
 #include "CLI11.hpp"
@@ -10,7 +11,7 @@
 
 struct Config {
     int verbose = 0;
-    double jitter = 0; // implement
+    double jitter = 2;
     bool sort = false; // <- on by default
     bool dry = false;
 };
@@ -97,6 +98,13 @@ std::vector<double> generate_initial_priorities(const Graph &graph, const Config
     if (config.sort) {
         for (auto [u, deg]: std::views::enumerate(graph.total_deg)) {
             priorities[u] = deg;
+        }
+    }
+    if (config.jitter > 0) {
+        std::mt19937 engine(std::random_device{}());
+        std::uniform_real_distribution<> generator(-config.jitter, config.jitter);
+        for (auto &priority: priorities) {
+            priority += generator(engine);
         }
     }
     return priorities;
