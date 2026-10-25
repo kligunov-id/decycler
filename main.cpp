@@ -3,6 +3,7 @@
 #include <numeric>
 #include <random>
 #include <ranges>
+#include <utility>
 
 #include "CLI11.hpp"
 
@@ -14,6 +15,7 @@ struct Config {
     double jitter = 2;
     bool sort = false; // <- on by default
     bool dry = false;
+    size_t iterations = 1;
 };
 
 class Evaluator {
@@ -29,11 +31,8 @@ public:
             sort_nodes_by_priority(out_links, priorities);
         }
         Log::info("Seed picking order: {}", picking_order);
-        Log::info("Outlinks: {}", graph.out_links[0]);
-        Log::info("Outlinks: {}", graph.out_links[1]);
-        Log::info("Outlinks: {}", graph.out_links[2]);
-        Log::info("Outlinks: {}", graph.out_links[3]);
 
+        std::fill(states.begin(), states.end(), NONE);
         for (Node u = 0; u < graph.n; u++) {
             if (states[u] == NONE) {
                 add_node(u);
@@ -114,8 +113,25 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
     Log::info("Graph: n={}, m={}", graph.n, graph.m);
 
     std::vector<double> priorities = generate_initial_priorities(graph, config);
-    Log::info("Priorities: {}", priorities);
-    const std::vector<Node> skipped = Evaluator(graph).evaluate(priorities);
+    Log::info("Initial priorities: {}", priorities);
+
+    Evaluator evaluator(graph);
+    std::vector<Node> skipped = evaluator.evaluate(priorities);
+
+    std::mt19937 engine(std::random_device{}());
+    std::uniform_int_distribution<> node_generator(0, graph.n - 1);
+    for (size_t iteration = 0; iteration < config.iterations; iteration++) {
+        std::vector<double> new_priorities = priorities;
+        Node u = node_generator(engine), v = node_generator(engine);
+        std::swap(new_priorities[u], new_priorities[v]);
+
+        std::vector<Node> new_skipped = evaluator.evaluate(new_priorities);
+        if (new_skipped.size() < skipped.size()) {
+            std::swap(new_skipped, skipped);
+            std::swap(new_priorities, priorities);
+        }
+        Log::info("Total nodes skipped: {}", skipped.size());
+    }
 
     if (!config.dry) {
         for (Node u: skipped) {
@@ -135,6 +151,7 @@ int main(int argc, char **argv) {
 
     app.add_flag("-s", config.sort, "Set node order priorites equal to node degrees");
     app.add_option("-j", config.jitter, "Specify node priority variation");
+    app.add_option("-i,--iterations", config.iterations, "Number of simulation runs");
 
     CLI11_PARSE(app, argc, argv);
 
