@@ -34,3 +34,14 @@ std::istream& operator>>(std::istream& in, Graph& graph) {
     }
     return in;
 }
+
+std::ostream& operator<<(std::ostream& out, const Graph& graph) { // <- check that extra spaces do not break python reader
+    out << graph.n << " " << graph.m << " 0\n";
+    for (Node u = 0; u < graph.n; u++) {
+        for (Node v: graph.out_links[u]) {
+            out << v << " ";
+        }
+        out << "\n";
+    }
+    return out;
+}
