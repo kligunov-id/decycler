@@ -11,11 +11,12 @@
 #include "graph.hpp"
 
 struct Config {
-    int verbose = 0;
+    int32_t verbose = 0;
     double jitter = 2;
     bool no_priorities = false;
     bool dry = false;
     size_t iterations = 1;
+    int32_t seed = -1;
 };
 
 class Evaluator {
@@ -92,7 +93,7 @@ private:
     }
 };
 
-std::vector<double> generate_initial_priorities(const Graph &graph, const Config &config) {
+std::vector<double> generate_initial_priorities(const Graph &graph, const Config &config, auto &random_engine) {
     std::vector<double> priorities(graph.n, 0);
     if (!config.no_priorities) {
         for (auto [u, deg]: std::views::enumerate(graph.total_deg)) {
@@ -100,10 +101,9 @@ std::vector<double> generate_initial_priorities(const Graph &graph, const Config
         }
     }
     if (config.jitter > 0) {
-        std::mt19937 engine(std::random_device{}());
         std::uniform_real_distribution<> generator(-config.jitter, config.jitter);
         for (auto &priority: priorities) {
-            priority += generator(engine);
+            priority += generator(random_engine);
         }
     }
     return priorities;
@@ -112,17 +112,18 @@ std::vector<double> generate_initial_priorities(const Graph &graph, const Config
 void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigterm
     Log::info("Graph: n={}, m={}", graph.n, graph.m);
 
-    std::vector<double> priorities = generate_initial_priorities(graph, config);
+    std::mt19937 random_engine(config.seed > 0 ? config.seed : std::random_device{}());
+
+    std::vector<double> priorities = generate_initial_priorities(graph, config, random_engine);
     Log::debug("Initial priorities: {}", priorities);
 
     Evaluator evaluator(graph);
     std::vector<Node> skipped = evaluator.evaluate(priorities);
 
-    std::mt19937 engine(std::random_device{}());
     std::uniform_int_distribution<> node_generator(0, graph.n - 1);
     for (size_t iteration = 0; iteration < config.iterations; iteration++) {
         std::vector<double> new_priorities = priorities;
-        Node u = node_generator(engine), v = node_generator(engine);
+        Node u = node_generator(random_engine), v = node_generator(random_engine);
         std::swap(new_priorities[u], new_priorities[v]);
 
         std::vector<Node> new_skipped = evaluator.evaluate(new_priorities);
@@ -152,6 +153,7 @@ int main(int argc, char **argv) {
     app.add_flag("-p,--no-priorities", config.no_priorities, "Disable degree-based ordering heuristic. Warning: do not use without jitter");
     app.add_option("-j,--jitter", config.jitter, "Specify node priority variation")->capture_default_str();
     app.add_option("-i,--iterations", config.iterations, "Number of simulation runs")->capture_default_str();
+    app.add_option("-s,--seed", config.seed, "Use specified random seed");
 
     CLI11_PARSE(app, argc, argv);
 
