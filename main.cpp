@@ -74,17 +74,12 @@ private:
     }
 
     void add_node(Node u) {
-        Log::debug("Adding node {}", u);
         states[u] = VISITING;
         for (Node v: graph.out_links[u]) {
-            if (states[v] == VISITING) {
-                Log::error("Fatal eror, edge {}->{} is inside a cycle", v, u);
-            }
             if (states[v] == NONE) {
                 if (is_acyclic_with(v)) {
                     add_node(v);
                 } else {
-                    Log::debug("Skipping node {}", v);
                     states[v] = SKIPPED;
                 }
             }
