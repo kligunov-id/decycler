@@ -39,7 +39,7 @@ std::ostream& operator<<(std::ostream& out, const Graph& graph) { // <- check th
     out << graph.n << " " << graph.m << " 0\n";
     for (Node u = 0; u < graph.n; u++) {
         for (Node v: graph.out_links[u]) {
-            out << v << " ";
+            out << v + 1 << " ";
         }
         out << "\n";
     }
