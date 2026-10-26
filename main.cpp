@@ -13,7 +13,7 @@
 struct Config {
     int verbose = 0;
     double jitter = 2;
-    bool sort = false; // <- on by default
+    bool no_priorities = false;
     bool dry = false;
     size_t iterations = 1;
 };
@@ -30,7 +30,7 @@ public:
         for (auto &out_links: graph.out_links) {
             sort_nodes_by_priority(out_links, priorities);
         }
-        Log::info("Seed picking order: {}", picking_order);
+        Log::debug("Seed picking order: {}", picking_order);
 
         std::fill(states.begin(), states.end(), NONE);
         for (Node u = 0; u < graph.n; u++) {
@@ -94,7 +94,7 @@ private:
 
 std::vector<double> generate_initial_priorities(const Graph &graph, const Config &config) {
     std::vector<double> priorities(graph.n, 0);
-    if (config.sort) {
+    if (!config.no_priorities) {
         for (auto [u, deg]: std::views::enumerate(graph.total_deg)) {
             priorities[u] = deg;
         }
@@ -113,7 +113,7 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
     Log::info("Graph: n={}, m={}", graph.n, graph.m);
 
     std::vector<double> priorities = generate_initial_priorities(graph, config);
-    Log::info("Initial priorities: {}", priorities);
+    Log::debug("Initial priorities: {}", priorities);
 
     Evaluator evaluator(graph);
     std::vector<Node> skipped = evaluator.evaluate(priorities);
@@ -139,19 +139,19 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
         }
     }
 
-    Log::info("Total nodes skipped: {}, skipped nodes: {}", skipped.size(), skipped);
+    Log::debug("Total nodes skipped: {}, skipped nodes: {}", skipped.size(), skipped);
 }
 
 int main(int argc, char **argv) {
     Config config;
 
     CLI::App app;
-    app.add_flag("-v", config.verbose, "Print more info, -vv for full debug output");
-    app.add_flag("-d", config.dry, "Do not print the answer");
+    app.add_flag("-v,--verbose", config.verbose, "Print more info, -vv for full debug output");
+    app.add_flag("-d,--dry", config.dry, "Do not print the answer");
 
-    app.add_flag("-s", config.sort, "Set node order priorites equal to node degrees");
-    app.add_option("-j", config.jitter, "Specify node priority variation");
-    app.add_option("-i,--iterations", config.iterations, "Number of simulation runs");
+    app.add_flag("-p,--no-priorities", config.no_priorities, "Disable degree-based ordering heuristic. Warning: do not use without jitter");
+    app.add_option("-j,--jitter", config.jitter, "Specify node priority variation")->capture_default_str();
+    app.add_option("-i,--iterations", config.iterations, "Number of simulation runs")->capture_default_str();
 
     CLI11_PARSE(app, argc, argv);
 
