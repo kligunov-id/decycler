@@ -22,7 +22,9 @@ struct Config {
 class Evaluator {
 public:
 
-    Evaluator(Graph& graph): graph(graph), states(graph.n, NONE) {}
+    Evaluator(Graph& graph): graph(graph), states(graph.n, NONE), index(graph.n, 0) {
+        queue.reserve(graph.n);
+    }
 
     std::vector<Node> evaluate(const std::vector<double> &priorities) {
         std::vector<Node> picking_order(graph.n);
@@ -34,9 +36,11 @@ public:
         Log::debug("Seed picking order: {}", picking_order);
 
         std::fill(states.begin(), states.end(), NONE);
+        std::fill(index.begin(), index.end(), 0);
+
         for (Node u = 0; u < graph.n; u++) {
             if (states[u] == NONE) {
-                add_node(u);
+                add_nodes(u);
             }
         }
         std::vector<Node> skipped;
@@ -59,6 +63,8 @@ private:
     };
 
     std::vector<State> states;
+    std::vector<size_t> index; // dirtiest hack
+    std::vector<Node> queue;
 
     void sort_nodes_by_priority(std::vector<Node> &nodes, const std::vector<double> &priorities) {
         std::sort(nodes.begin(), nodes.end(), [&](Node u, Node v) { return priorities[u] < priorities[v]; });
@@ -73,18 +79,26 @@ private:
         return true;
     }
 
-    void add_node(Node u) {
+    void add_nodes(Node u) {
+        queue.push_back(u);
         states[u] = VISITING;
-        for (Node v: graph.out_links[u]) {
-            if (states[v] == NONE) {
-                if (is_acyclic_with(v)) {
-                    add_node(v);
-                } else {
-                    states[v] = SKIPPED;
+        while (!queue.empty()) {
+            u = queue.back();
+            while (index[u] != graph.out_links[u].size()) {
+                Node v = graph.out_links[u][index[u]++];
+                if (states[v] == VISITED) {
+                    continue;
                 }
+                if (is_acyclic_with(v)) {
+                    queue.push_back(v);
+                    states[v] = VISITING;
+                    break;
+                }
+                states[v] = SKIPPED;
             }
+            queue.pop_back();
+            states[u] = VISITED;
         }
-        states[u] = VISITED;
     }
 };
 
