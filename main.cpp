@@ -17,6 +17,7 @@ struct Config {
     bool dry = false;
     size_t iterations = 1;
     int32_t seed = -1;
+    int32_t swap_parts = 10;
 };
 
 class Evaluator {
@@ -135,8 +136,11 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
     std::uniform_int_distribution<> node_generator(0, graph.n - 1);
     for (size_t iteration = 0; iteration < config.iterations; iteration++) {
         std::vector<double> new_priorities = priorities;
-        Node u = node_generator(random_engine), v = node_generator(random_engine);
-        std::swap(new_priorities[u], new_priorities[v]);
+
+        for (size_t swap_count = 0; swap_count * config.swap_parts < graph.n; swap_count++) {
+            Node u = node_generator(random_engine), v = node_generator(random_engine);
+            std::swap(new_priorities[u], new_priorities[v]);
+        }
 
         std::vector<Node> new_skipped = evaluator.evaluate(new_priorities);
         if (new_skipped.size() < skipped.size()) {
@@ -166,6 +170,7 @@ int main(int argc, char **argv) {
     app.add_option("-j,--jitter", config.jitter, "Specify node priority variation")->capture_default_str();
     app.add_option("-i,--iterations", config.iterations, "Number of simulation runs")->capture_default_str();
     app.add_option("-s,--seed", config.seed, "Use specified random seed");
+    app.add_option("-m,--mutation", config.swap_parts, "Mutate 1 in every X node");
 
     CLI11_PARSE(app, argc, argv);
 
