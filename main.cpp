@@ -79,25 +79,28 @@ private:
         return true;
     }
 
+void process_node(Node u) {
+        while (index[u] != graph.out_links[u].size()) {
+            Node v = graph.out_links[u][index[u]++];
+            if (states[v] == VISITED) {
+                continue;
+            }
+            if (is_acyclic_with(v)) {
+                queue.push_back(v);
+                states[v] = VISITING;
+                return;
+            }
+            states[v] = SKIPPED;
+        }
+        queue.pop_back();
+        states[u] = VISITED;
+    }
+
     void add_nodes(Node u) {
         queue.push_back(u);
         states[u] = VISITING;
         while (!queue.empty()) {
-            u = queue.back();
-            while (index[u] != graph.out_links[u].size()) {
-                Node v = graph.out_links[u][index[u]++];
-                if (states[v] == VISITED) {
-                    continue;
-                }
-                if (is_acyclic_with(v)) {
-                    queue.push_back(v);
-                    states[v] = VISITING;
-                    break;
-                }
-                states[v] = SKIPPED;
-            }
-            queue.pop_back();
-            states[u] = VISITED;
+            process_node(queue.back());
         }
     }
 };
