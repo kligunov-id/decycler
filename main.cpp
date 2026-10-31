@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <csignal>
 #include <cmath>
 #include <iostream>
 #include <numeric>
@@ -10,6 +11,12 @@
 
 #include "log.hpp"
 #include "graph.hpp"
+
+bool caught_sigterm = false;
+
+void handle_sigterm(int signal) {
+    caught_sigterm = true;
+}
 
 struct Config {
     int32_t verbose = 0;
@@ -137,7 +144,7 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
 
     std::uniform_int_distribution<> node_generator(0, graph.n - 1);
     double T = config.T_max;
-    for (size_t iteration = 0; iteration < config.iterations; iteration++) {
+    for (size_t iteration = 0; iteration < config.iterations && !caught_sigterm; iteration++) {
         std::vector<double> new_priorities = priorities;
 
         for (size_t swap_count = 0; swap_count * config.swap_parts < graph.n; swap_count++) {
@@ -166,6 +173,9 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
 }
 
 int main(int argc, char **argv) {
+    std::signal(SIGTERM, handle_sigterm);
+    std::signal(SIGINT, handle_sigterm);
+
     Config config;
 
     CLI::App app;
