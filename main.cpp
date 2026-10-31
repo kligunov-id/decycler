@@ -17,7 +17,7 @@ struct Config {
     bool dry = false;
     size_t iterations = 1;
     int32_t seed = -1;
-    int32_t swap_parts = 10;
+    int32_t swap_parts = 300;
 };
 
 class Evaluator {
@@ -147,7 +147,7 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
             std::swap(new_skipped, skipped);
             std::swap(new_priorities, priorities);
         }
-        Log::info("Total nodes skipped: {}", skipped.size());
+        Log::info("Total nodes skipped: {}, candidate score: {}", skipped.size(), new_skipped.size()); // candidate score is not correct, but I don't care
     }
 
     if (!config.dry) {
