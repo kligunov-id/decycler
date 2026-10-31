@@ -2,6 +2,7 @@
 #include <csignal>
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <numeric>
 #include <random>
 #include <ranges>
@@ -23,9 +24,9 @@ struct Config {
     double jitter = 2;
     bool no_priorities = false;
     bool dry = false;
-    size_t iterations = 100;
+    size_t iterations = std::numeric_limits<std::size_t>::max();
     int32_t seed = -1;
-    int32_t swap_parts = 300;
+    int32_t swap_parts = 1000;
     double T_max = 0;
     double q = 0.99;
 };
@@ -184,11 +185,11 @@ int main(int argc, char **argv) {
 
     app.add_flag("-p,--no-priorities", config.no_priorities, "Disable degree-based ordering heuristic. Warning: do not use without jitter");
     app.add_option("-j,--jitter", config.jitter, "Specify node priority variation")->capture_default_str();
-    app.add_option("-i,--iterations", config.iterations, "Number of simulation runs")->capture_default_str();
+    app.add_option("-i,--iterations", config.iterations, "Number of simulation runs");
     app.add_option("-s,--seed", config.seed, "Use specified random seed");
-    app.add_option("-m,--mutation", config.swap_parts, "Mutate 1 in every X node");
-    app.add_option("-t,--temp", config.T_max, "Inital temperature");
-    app.add_option("-q", config.q, "Coolling factor");
+    app.add_option("-m,--mutation", config.swap_parts, "Mutate 1 in every X node")->capture_default_str();
+    app.add_option("-t,--temp", config.T_max, "Inital temperature")->capture_default_str();
+    app.add_option("-q", config.q, "Cooling factor")->capture_default_str();
 
     CLI11_PARSE(app, argc, argv);
 
