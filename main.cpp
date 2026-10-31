@@ -83,7 +83,7 @@ private:
 void process_node(Node u) {
         while (index[u] != graph.out_links[u].size()) {
             Node v = graph.out_links[u][index[u]++];
-            if (states[v] == VISITED) {
+            if (states[v] == VISITED || states[v] == SKIPPED) {
                 continue;
             }
             if (is_acyclic_with(v)) {
