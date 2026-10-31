@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <random>
@@ -15,9 +16,11 @@ struct Config {
     double jitter = 2;
     bool no_priorities = false;
     bool dry = false;
-    size_t iterations = 1;
+    size_t iterations = 100;
     int32_t seed = -1;
     int32_t swap_parts = 300;
+    double T_max = 0;
+    double q = 0.99;
 };
 
 class Evaluator {
@@ -128,12 +131,12 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
     std::mt19937 random_engine(config.seed > 0 ? config.seed : std::random_device{}());
 
     std::vector<double> priorities = generate_initial_priorities(graph, config, random_engine);
-    Log::debug("Initial priorities: {}", priorities);
 
     Evaluator evaluator(graph);
     std::vector<Node> skipped = evaluator.evaluate(priorities);
 
     std::uniform_int_distribution<> node_generator(0, graph.n - 1);
+    double T = config.T_max;
     for (size_t iteration = 0; iteration < config.iterations; iteration++) {
         std::vector<double> new_priorities = priorities;
 
@@ -143,11 +146,14 @@ void solve(Graph &graph, const Config &config) { // <- reseed + local opt + sigt
         }
 
         std::vector<Node> new_skipped = evaluator.evaluate(new_priorities);
-        if (new_skipped.size() < skipped.size()) {
+        double delta_E = static_cast<double>(new_skipped.size()) - skipped.size(); // without cast negative would overflow to positive
+        double transition_prob = std::min(1.0, std::exp(-delta_E / T));
+        if (std::bernoulli_distribution{transition_prob}(random_engine)) {
             std::swap(new_skipped, skipped);
             std::swap(new_priorities, priorities);
         }
-        Log::info("Total nodes skipped: {}, candidate score: {}", skipped.size(), new_skipped.size()); // candidate score is not correct, but I don't care
+        T *= config.q;
+        Log::info("Temp: {:.2f}, score: {}, candidate score: {}, p: {:.3f}", T, skipped.size(), new_skipped.size(), transition_prob); // candidate score is not correct, but I don't care
     }
 
     if (!config.dry) {
@@ -171,6 +177,8 @@ int main(int argc, char **argv) {
     app.add_option("-i,--iterations", config.iterations, "Number of simulation runs")->capture_default_str();
     app.add_option("-s,--seed", config.seed, "Use specified random seed");
     app.add_option("-m,--mutation", config.swap_parts, "Mutate 1 in every X node");
+    app.add_option("-t,--temp", config.T_max, "Inital temperature");
+    app.add_option("-q", config.q, "Coolling factor");
 
     CLI11_PARSE(app, argc, argv);
 
